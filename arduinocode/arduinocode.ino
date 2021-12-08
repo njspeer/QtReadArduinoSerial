@@ -31,11 +31,11 @@ void loop() {
   Serial.print('<');                 /* begin data */
   Serial.print(i);                   /* data */
   Serial.print(',');                 /* data */
-  Serial.print(i*10);                   /* data */
+  Serial.print(i*10);                /* data */
   Serial.print(',');                 /* data */
-  Serial.print(i*100);                   /* data */
+  Serial.print(i*100);               /* data */
   Serial.print(',');                 /* data */
-  Serial.print(i*1000);                   /* data */
+  Serial.print(i*1000);              /* data */
   Serial.print('>');                 /* end data */
   Serial.print('\n');                /* data */
   i++;                               /* increment i */ 

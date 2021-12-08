@@ -2,10 +2,16 @@
 #include "ui_readserial.h"
 #include <QDebug>
 
-ReadSerial::ReadSerial(QWidget *parent) : QMainWindow(parent), ui(new Ui::ReadSerial)
-{
+#include <QRegularExpression>
 
+ReadSerial::ReadSerial(QString fpth, QWidget *parent)
+  : QMainWindow(parent),
+  ui(new Ui::ReadSerial)
+{
   ui->setupUi(this);
+
+  /* set fpath */
+  fpath = fpth;
 
   /* delete output file if it exists */
   if(QFileInfo::exists(fpath)){QFile::remove(fpath);}
@@ -22,8 +28,8 @@ ReadSerial::ReadSerial(QWidget *parent) : QMainWindow(parent), ui(new Ui::ReadSe
   connect(serial, &QSerialPort::readyRead, this, &ReadSerial::readSerialPort);
 
   /* disambiguate between QSerialPort::error(QSerialPort::SerialPortError) and QSerialPort::error() */
-  auto error = static_cast <void(QSerialPort::*)(QSerialPort::SerialPortError)> (&QSerialPort::error);
-  connect(serial, error, this, &ReadSerial::SerialError);
+  auto serialerror = static_cast <void(QSerialPort::*)(QSerialPort::SerialPortError)> (&QSerialPort::error);
+  connect(serial, serialerror, this, &ReadSerial::SerialError);
 }
 
 ReadSerial::~ReadSerial()
@@ -53,7 +59,6 @@ QString ReadSerial::GetSerialPortName()
 /* configure serial port */
 void ReadSerial::configureSerialPort(QSerialPort *serial)
 {
-
   /* get port name */
   QString pname = GetSerialPortName();
   if(pname.size() == 0)
@@ -74,7 +79,7 @@ void ReadSerial::configureSerialPort(QSerialPort *serial)
   serial->setDataTerminalReady(true);
 }
 
-/* slot: throw and error if there is an error on the serial port */
+/* slot: throw an error if there is an error on the serial port */
 void ReadSerial::SerialError()
 {
   qDebug() << "An error occured: " << serial->errorString();
@@ -83,11 +88,24 @@ void ReadSerial::SerialError()
   return;
 }
 
+/* find '\n' in C-style char array */
+int ReadSerial::findchar(char *Ach, int xlen)
+{
+  for(int i = 0; i < xlen; ++i)
+  {
+    if(Ach[i] == '\n')
+    {
+      return i+1;
+    }
+  }
+  return 0;
+}
+
 /* slot: read serial data, write to file */
 void ReadSerial::readSerialPort()
 {
-  /*clear the buffer one last time*/
-  if(++xi==1){serial->clear(); return;}
+  /* clear the buffer one last time */
+  if(++xi == 1){serial->clear(); return;}
 
   /* open file */
   QFile file(fpath);
@@ -101,15 +119,47 @@ void ReadSerial::readSerialPort()
 
   /* check buffer size, if < xlen_min, then return */
   qint64 bufsize = 1024;
+  const int xlen_min = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
   char xbuffer[bufsize];
-  int xlen_min = 4+3+2+1; /* 4items + 3commas + 2brackets + 1cr */
   qint64 xlen = serial->peek(xbuffer, bufsize);
   if(xlen < xlen_min){return;}
-  qDebug() << xi;
 
-  /* write data to file */
+  int xend = findchar(xbuffer, xlen);
+
+  if(xend == 0){return;}
+
+//  char line[xend+1];
+//  serial->readLine(line, xend);
+//  qDebug() << xi << ", " << line;
+  qDebug() << "xend = " << xend;
+
+  QString line;
+  QTextStream strstream(&line);
+  QTextStream fstream(&file);
+
+
+  /* write data to file and stream*/
   char c;
-  while(serial->getChar(&c)){file.write(&c);}
+  for(int i = 0; i < xend; ++i)
+  {
+    if(serial->getChar(&c))
+    {
+//      file.write(&c);
+      strstream << c;
+    }
+  }
+
+  /* parse out string */
+  QRegularExpression re("<(\\d+),(\\d+),(\\d+),(\\d+)>$");
+  QRegularExpressionMatch m = re.match(line);
+  int indx  = m.captured(1).toInt();
+  float dt  = m.captured(2).toFloat()*0.001;
+  qreal dy1 = m.captured(3).toFloat()*(4.656612875245797e-10);
+  qreal dy2 = m.captured(4).toFloat()*(4.656612875245797e-10);
+
+  fstream << indx << "," << dt << "," << dy1 << "," << dy2 << '\n';
+  qDebug() << indx << "," << dt << "," << dy1 << "," << dy2 << '\n';
+
 }
 
 /* [Stop] pressed */

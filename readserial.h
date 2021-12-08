@@ -21,14 +21,13 @@ class ReadSerial : public QMainWindow
   Q_OBJECT
 
 public:
-  ReadSerial(QWidget *parent = nullptr);
+  ReadSerial(QString fpth, QWidget *parent = nullptr);
   QString GetSerialPortName();
   QSerialPort *serial;
   void configureSerialPort(QSerialPort *serial);
+  int findchar(char *xbuffer, int xlen);
   void readSerialPort();
-  QFile file;
-  int xi = 0;
-  QString fpath = "../Serial/data.txt";
+  QString fpath;// = "../Serial/data.txt";
   ~ReadSerial();
 
 private slots:
@@ -37,6 +36,8 @@ private slots:
   void on_Stop_clicked();
 
 private:
+  QFile file;
+  int xi = 0;
   Ui::ReadSerial *ui;
   void SerialError();
 };

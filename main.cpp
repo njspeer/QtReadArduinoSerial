@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
   QApplication a(argc, argv);
-  ReadSerial w;
+  ReadSerial w("../Serial/data.txt");
   w.move(200, 200);
   w.show();
   return a.exec();
