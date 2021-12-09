@@ -29,8 +29,6 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   /* configure serial port*/
   configureSerialPort(serial);
 
-  qDebug() << "check baudRate: " << serial->baudRate();
-
   /* connect &serial to &readyRead */
   connect(serial, &QSerialPort::readyRead, this, &ReadSerial::readSerialPort);
 
@@ -63,8 +61,8 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   ui->chartview->chart()->setTitle("Arduino Sample Data");
 
   /* add first two points */
-  series1->append(0, 0);
-  series2->append(0, 0);
+  series1->append(0, 1.0);
+  series2->append(0, 1.0);
 
   /* disambiguate between QSerialPort::error(QSerialPort::SerialPortError) and QSerialPort::error() */
   auto serialerror = static_cast <void(QSerialPort::*)(QSerialPort::SerialPortError)> (&QSerialPort::error);
@@ -189,11 +187,9 @@ void ReadSerial::readSerialPort()
   QRegularExpression re("<(\\d+),(\\d+),(\\d+),(\\d+)>$");
   QRegularExpressionMatch m = re.match(line);
   int indx  =  m.captured(1).toInt();
-  qreal ti  =  m.captured(2).toFloat()*0.001;
-  qreal dy1 = (m.captured(3).toFloat()*(y2max) - 1) * dy;
-  qreal dy2 = (m.captured(4).toFloat()*(y2max) - 1) * dy;
-
-  qDebug() << y2max << dy1 << ", " << dy2;
+  qreal ti  =  m.captured(2).toFloat() * 0.001;
+  qreal dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
+  qreal dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
 
   qreal y1 = y1last + dy1;
   qreal y2 = y2last + dy2;
@@ -203,7 +199,7 @@ void ReadSerial::readSerialPort()
 
   if(xi < Npnt)
   {
-    qaxisX->setRange(0, ti + 0.001);
+    qaxisX->setRange(0, ti + 0.005);
   }
   else
   {

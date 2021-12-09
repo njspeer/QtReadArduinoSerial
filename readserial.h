@@ -43,16 +43,12 @@ public:
   ~ReadSerial();
 
   QtCharts::QLineSeries *series1, *series2;
-  // QtCharts::QChart      *chart;
-//  QtCharts::QChartView  *chartView;
 
   QValueAxis *qaxisX, *qaxisY;
   QPen makePen(Qt::GlobalColor color, int width);
 
 
 private slots:
-//  void on_pushButton_clicked();
-
   void on_Stop_clicked();
 
 private:
@@ -63,7 +59,7 @@ private:
   const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
   const int Npnt = 2000;
   const qreal dy = 0.05;
-  qreal tlast = 0, y1last = 0, y2last = 0, ymin = 1.1, ymax = 0;
+  qreal tlast = 0, y1last = 1, y2last = 1, ymin = 1, ymax = 1;
   const qreal y2max = 9.313225750491594e-10; /* 2/((qreal)(2^31-1)) */
 };
 #endif // READSERIAL_H
