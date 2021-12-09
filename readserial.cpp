@@ -2,7 +2,15 @@
 #include "ui_readserial.h"
 #include <QDebug>
 
-#include <QRegularExpression>
+#include <QRegularExpression> /* regex */
+#include <QtCharts/QLineSeries>
+
+#include <QtCharts/QValueAxis>
+
+#include <algorithm>
+
+
+QT_CHARTS_USE_NAMESPACE
 
 ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   : QMainWindow(parent),
@@ -10,11 +18,10 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
 {
   ui->setupUi(this);
 
-  /* set fpath */
-  fpath = fpth;
-
-  /* delete output file if it exists */
-  if(QFileInfo::exists(fpath)){QFile::remove(fpath);}
+  /* create new file object; delete old file if it exists; open */
+  file = new QFile(fpth, this);
+  if(file->exists()){file->remove();}
+  openfile(file, QIODevice::WriteOnly | QIODevice::Append);
 
   /* creat a serial-port */
   serial = new QSerialPort(this);
@@ -27,6 +34,38 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   /* connect &serial to &readyRead */
   connect(serial, &QSerialPort::readyRead, this, &ReadSerial::readSerialPort);
 
+  /* make new QLineSeries and x- and y-axes */
+  series1 = new QtCharts::QLineSeries(this);
+  series2 = new QtCharts::QLineSeries(this);
+  qaxisX  = new QValueAxis(this);
+  qaxisY  = new QValueAxis(this);
+
+  ui->chartview->chart()->addSeries(series1);
+  ui->chartview->chart()->addSeries(series2);
+
+  /* make x- and y-axes and add them to QChartView */
+  ui->chartview->chart()->addAxis(qaxisX, Qt::AlignBottom);
+  ui->chartview->chart()->addAxis(qaxisY, Qt::AlignLeft);
+
+  /* attach axis to series */
+  series1->attachAxis(qaxisX);
+  series2->attachAxis(qaxisX);
+  series1->attachAxis(qaxisY);
+  series2->attachAxis(qaxisY);
+
+  /* set pen color and use OpenGL */
+  series1->setPen(makePen(Qt::blue, 3));
+  series2->setPen(makePen(Qt::red, 3));
+  series1->setUseOpenGL(true);
+  series2->setUseOpenGL(true);
+
+  /* set title */
+  ui->chartview->chart()->setTitle("Arduino Sample Data");
+
+  /* add first two points */
+  series1->append(0, 0);
+  series2->append(0, 0);
+
   /* disambiguate between QSerialPort::error(QSerialPort::SerialPortError) and QSerialPort::error() */
   auto serialerror = static_cast <void(QSerialPort::*)(QSerialPort::SerialPortError)> (&QSerialPort::error);
   connect(serial, serialerror, this, &ReadSerial::SerialError);
@@ -35,7 +74,32 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
 ReadSerial::~ReadSerial()
 {
   delete ui;
-  file.close();
+}
+
+/* returns a pen specified by color and width */
+QPen ReadSerial::makePen(Qt::GlobalColor color, int width)
+{
+  QPen pen(color);
+  pen.setWidth(width);
+  return pen;
+}
+
+/* open file */
+void ReadSerial::openfile(QFile *file, QFlags<QIODevice::OpenMode::enum_type> mode)
+{
+  if(!file->isOpen())
+  {
+    if(!file->open(mode))
+    {
+      QMessageBox::critical(nullptr, "Error!", "Could not open file.");
+    }
+  }
+}
+
+/* close file */
+void ReadSerial::closefile(QFile *file)
+{
+  if(file->isOpen()){file->close();}
 }
 
 /* get the Arduino-port serial portname */
@@ -88,12 +152,12 @@ void ReadSerial::SerialError()
   return;
 }
 
-/* find '\n' in C-style char array */
-int ReadSerial::findchar(char *Ach, int xlen)
+/* find char c in C-style char array; returns position + 1 */
+int ReadSerial::findchar(char *ch, int xlen, char c)
 {
   for(int i = 0; i < xlen; ++i)
   {
-    if(Ach[i] == '\n')
+    if(ch[i] == c)
     {
       return i+1;
     }
@@ -107,63 +171,56 @@ void ReadSerial::readSerialPort()
   /* clear the buffer one last time */
   if(++xi == 1){serial->clear(); return;}
 
-  /* open file */
-  QFile file(fpath);
-  if(!file.isOpen())
-  {
-    if(!file.open(QIODevice::WriteOnly | QIODevice::Append))
-    {
-      QMessageBox::critical(this, tr("Error!"), "Could not open file.");
-    }
-  }
-
   /* check buffer size, if < xlen_min, then return */
-  qint64 bufsize = 1024;
-  const int xlen_min = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
   char xbuffer[bufsize];
-  qint64 xlen = serial->peek(xbuffer, bufsize);
-  if(xlen < xlen_min){return;}
+  qint64 linelength = serial->peek(xbuffer, bufsize);
+  if(linelength < linemin){return;}
 
-  int xend = findchar(xbuffer, xlen);
-
+  int xend = findchar(xbuffer, linelength, '\n');
   if(xend == 0){return;}
 
-//  char line[xend+1];
-//  serial->readLine(line, xend);
-//  qDebug() << xi << ", " << line;
-  qDebug() << "xend = " << xend;
+  char buf[bufsize];
+  qint64 linlength = serial->readLine(buf, bufsize);
 
-  QString line;
-  QTextStream strstream(&line);
-  QTextStream fstream(&file);
-
-
-  /* write data to file and stream*/
-  char c;
-  for(int i = 0; i < xend; ++i)
-  {
-    if(serial->getChar(&c))
-    {
-//      file.write(&c);
-      strstream << c;
-    }
-  }
+  QString line = QString::fromStdString((std::string)buf);
+  QTextStream fstream(file);
 
   /* parse out string */
   QRegularExpression re("<(\\d+),(\\d+),(\\d+),(\\d+)>$");
   QRegularExpressionMatch m = re.match(line);
-  int indx  = m.captured(1).toInt();
-  float dt  = m.captured(2).toFloat()*0.001;
-  qreal dy1 = m.captured(3).toFloat()*(4.656612875245797e-10);
-  qreal dy2 = m.captured(4).toFloat()*(4.656612875245797e-10);
+  int indx  =  m.captured(1).toInt();
+  qreal ti  =  m.captured(2).toFloat()*0.001;
+  qreal dy1 = (m.captured(3).toFloat()*(y2max) - 1) * dy;
+  qreal dy2 = (m.captured(4).toFloat()*(y2max) - 1) * dy;
 
-  fstream << indx << "," << dt << "," << dy1 << "," << dy2 << '\n';
-  qDebug() << indx << "," << dt << "," << dy1 << "," << dy2 << '\n';
+  qDebug() << y2max << dy1 << ", " << dy2;
 
+  qreal y1 = y1last + dy1;
+  qreal y2 = y2last + dy2;
+
+  ymax = std::max(std::max(y1, y2), ymax);
+  ymin = std::min(std::min(y1, y2), ymin);
+
+  if(xi < Npnt)
+  {
+    qaxisX->setRange(0, ti + 0.001);
+  }
+  else
+  {
+    series1->remove(0);
+    series2->remove(0);
+    qreal x0 = series1->at(0).x();
+    qaxisX->setRange(x0, ti + 0.001);
+  }
+  series1->append(ti, y1);
+  series2->append(ti, y2);
+
+  qaxisY->setRange(ymin, ymax);
+
+  fstream << indx << "," << linlength << "," << ti << "," << dy1 << "," << dy2 << '\n';
+  y1last = y1;
+  y2last = y2;
 }
 
 /* [Stop] pressed */
-void ReadSerial::on_Stop_clicked()
-{
-  qApp->quit();
-}
+void ReadSerial::on_Stop_clicked(){qApp->exit();}
