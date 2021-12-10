@@ -1,4 +1,5 @@
 #include "readserial.h"
+#include "ringbuff.h"
 #include "ui_readserial.h"
 #include <QDebug>
 
@@ -17,6 +18,8 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   ui(new Ui::ReadSerial)
 {
   ui->setupUi(this);
+
+  b = new Vbuff<double>(2000);
 
   /* create new file object; delete old file if it exists; open */
   file = new QFile(fpth, this);

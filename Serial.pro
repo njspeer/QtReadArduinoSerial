@@ -1,5 +1,7 @@
 QT      += core gui serialport widgets charts
-CONFIG  += c++14
+CONFIG  += c++17
 SOURCES += main.cpp readserial.cpp
-HEADERS += readserial.h
+HEADERS += readserial.h ringbuff.h
 FORMS   += readserial.ui
+
+

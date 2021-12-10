@@ -1,0 +1,44 @@
+#include "ringbuff.h"
+#include <iostream>
+#include <QDebug>
+
+template <class T>
+SimpleRingBuffer<T>::SimpleRingBuffer(size_t buffsize)
+{
+  buffersize = buffsize;
+  Vdt.reserve(buffsize);
+  Vy1.reserve(buffsize);
+  Vy2.reserve(buffsize);
+  xi = 0;
+  Ni = 0;
+}
+
+template <class T>
+int SimpleRingBuffer<T>::push(T dt, T y1, T y2)
+{
+  if(Vdt.size() < buffersize)
+  {
+    Vdt.push_back(dt);
+    Vy1.push_back(y1);
+    Vy2.push_back(y2);
+    xi = Ni;
+  }
+  else
+  {
+    xi = Ni % buffersize;
+    Vdt[xi] = dt;
+    Vy1[xi] = y1;
+    Vy2[xi] = y2;
+  }
+  return ++Ni;
+}
+
+template <class T>
+void printelements(std::vector<T> v)
+{
+  qDebug() << v[0];
+  for(size_t i = 0; i < v.size(); ++i)
+    qDebug() << "; " << v[i];
+
+  qDebug() << '\n';
+}
