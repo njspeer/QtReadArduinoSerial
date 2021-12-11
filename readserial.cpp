@@ -1,5 +1,4 @@
 #include "readserial.h"
-#include "ringbuff.h"
 #include "ui_readserial.h"
 #include <QDebug>
 
@@ -10,8 +9,14 @@
 
 #include <algorithm>
 
-
 QT_CHARTS_USE_NAMESPACE
+
+/*
+ * Stop here.
+ * I would like to change the name of the Vbuff class
+ * Or maybe make another class that incorporates Vbuff
+ * Then, I need to add that to the readSerialPort function
+*/
 
 ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   : QMainWindow(parent),
@@ -19,7 +24,10 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
 {
   ui->setupUi(this);
 
-  b = new Vbuff<double>(2000);
+  /* grab some memory from the heap for a few ring buffers */
+  bt = new RingBuff(Npnt);
+  by1 = new RingBuff(Npnt);
+  by2 = new RingBuff(Npnt);
 
   /* create new file object; delete old file if it exists; open */
   file = new QFile(fpth, this);
@@ -61,7 +69,7 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   series2->setUseOpenGL(true);
 
   /* set title */
-  ui->chartview->chart()->setTitle("Arduino Sample Data");
+  ui->chartview->chart()->setTitle("Arduino Random Walk");
 
   /* add first two points */
   series1->append(0, 1.0);
@@ -174,14 +182,14 @@ void ReadSerial::readSerialPort()
 
   /* check buffer size, if < xlen_min, then return */
   char xbuffer[bufsize];
-  qint64 linelength = serial->peek(xbuffer, bufsize);
+  int linelength = serial->peek(xbuffer, bufsize);
   if(linelength < linemin){return;}
 
   int xend = findchar(xbuffer, linelength, '\n');
   if(xend == 0){return;}
 
   char buf[bufsize];
-  qint64 linlength = serial->readLine(buf, bufsize);
+  int linlength = serial->readLine(buf, bufsize);
 
   QString line = QString::fromStdString((std::string)buf);
   QTextStream fstream(file);
@@ -189,31 +197,31 @@ void ReadSerial::readSerialPort()
   /* parse out string */
   QRegularExpression re("<(\\d+),(\\d+),(\\d+),(\\d+)>$");
   QRegularExpressionMatch m = re.match(line);
-  int indx  =  m.captured(1).toInt();
-  qreal ti  =  m.captured(2).toFloat() * 0.001;
-  qreal dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
-  qreal dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
+  int indx   =  m.captured(1).toInt();
+  double ti  =  m.captured(2).toFloat() * 0.001;
+  double dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
+  double dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
 
-  qreal y1 = y1last + dy1;
-  qreal y2 = y2last + dy2;
+  double y1 = y1last + dy1;
+  double y2 = y2last + dy2;
 
-  ymax = std::max(std::max(y1, y2), ymax);
-  ymin = std::min(std::min(y1, y2), ymin);
+  bt->push(ti);
+  by1->push(y1);
+  by2->push(y2);
 
-  if(xi < Npnt)
-  {
-    qaxisX->setRange(0, ti + 0.005);
-  }
-  else
+  ymax = std::max(by1->max, by2->max);
+  ymin = std::min(by1->min, by2->min);
+
+
+  if(bt->Ni > Npnt)
   {
     series1->remove(0);
     series2->remove(0);
-    qreal x0 = series1->at(0).x();
-    qaxisX->setRange(x0, ti + 0.001);
   }
   series1->append(ti, y1);
   series2->append(ti, y2);
 
+  qaxisX->setRange(bt->min, bt->max + 1);
   qaxisY->setRange(ymin, ymax);
 
   fstream << indx << "," << linlength << "," << ti << "," << dy1 << "," << dy2 << '\n';

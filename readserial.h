@@ -50,9 +50,8 @@ public:
   QValueAxis *qaxisX, *qaxisY;
   QPen makePen(Qt::GlobalColor color, int width);
 
-  const int Npnt = 2000;
-  Vbuff<double> *b;
-//  Vbuff<qreal> ringbuff;
+  const size_t Npnt = 2000;
+  RingBuff *bt, *by1, *by2;  /* ring buffers for data */
 
 private slots:
   void on_Stop_clicked();
@@ -61,11 +60,11 @@ private:
   int xi = 0;
   Ui::ReadSerial *ui;
   void SerialError();
-  qint64 bufsize = 1024;
+  int  bufsize = 1024;
   const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
-  const qreal dy = 0.05;
-  qreal tlast = 0, y1last = 1, y2last = 1, ymin = 1, ymax = 1;
-  const qreal y2max = 9.313225750491594e-10; /* 2/((qreal)(2^31-1)) */
+  const double dy = 0.05;
+  double y1last = 1, y2last = 1, ymin, ymax;
+  const double y2max = 9.313225750491594e-10; /* 2/((qreal)(2^31-1)) */
 
 };
 #endif // READSERIAL_H
