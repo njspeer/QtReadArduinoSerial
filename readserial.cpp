@@ -77,13 +77,12 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
 
   /* disambiguate between QSerialPort::error(QSerialPort::SerialPortError) and QSerialPort::error() */
   auto serialerror = static_cast <void(QSerialPort::*)(QSerialPort::SerialPortError)> (&QSerialPort::error);
+
+  /*  */
   connect(serial, serialerror, this, &ReadSerial::SerialError);
 }
 
-ReadSerial::~ReadSerial()
-{
-  delete ui;
-}
+ReadSerial::~ReadSerial(){delete ui;}
 
 /* returns a pen specified by color and width */
 QPen ReadSerial::makePen(Qt::GlobalColor color, int width)

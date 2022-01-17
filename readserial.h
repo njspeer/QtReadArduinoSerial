@@ -64,7 +64,7 @@ private:
   const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
   const double dy = 0.05;
   double y1last = 1, y2last = 1, ymin, ymax;
-  const double y2max = 9.313225750491594e-10; /* 2/((qreal)(2^31-1)) */
+  constexpr static double y2max = 9.313225750491594e-10; /* 2/((qreal)(2^31-1)) */
 
 };
 #endif // READSERIAL_H

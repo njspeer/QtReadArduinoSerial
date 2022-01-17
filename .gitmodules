@@ -1,0 +1,3 @@
+[submodule "Arduinocode_Random"]
+	path = Arduinocode_Random
+	url = git@github.com:njspeer/Arduinocode_Random.git
