@@ -212,7 +212,6 @@ void ReadSerial::readSerialPort()
   ymax = std::max(by1->max, by2->max);
   ymin = std::min(by1->min, by2->min);
 
-
   if(bt->Ni > Npnt)
   {
     series1->remove(0);
