@@ -25,7 +25,7 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   ui->setupUi(this);
 
   /* grab some memory from the heap for a few ring buffers */
-  bt = new RingBuff(Npnt);
+  bt  = new RingBuff(Npnt);
   by1 = new RingBuff(Npnt);
   by2 = new RingBuff(Npnt);
 
@@ -77,8 +77,6 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
 
   /* disambiguate between QSerialPort::error(QSerialPort::SerialPortError) and QSerialPort::error() */
   auto serialerror = static_cast <void(QSerialPort::*)(QSerialPort::SerialPortError)> (&QSerialPort::error);
-
-  /*  */
   connect(serial, serialerror, this, &ReadSerial::SerialError);
 }
 
@@ -204,7 +202,7 @@ void ReadSerial::readSerialPort()
   double y1 = y1last + dy1;
   double y2 = y2last + dy2;
 
-  bt->push(ti);
+   bt->push(ti);
   by1->push(y1);
   by2->push(y2);
 
