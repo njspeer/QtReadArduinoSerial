@@ -141,7 +141,7 @@ void ReadSerial::configureSerialPort(QSerialPort *serial)
   /* configure serial port */
   serial->setPortName(pname);
   serial->open(QIODevice::ReadWrite);
-  serial->setBaudRate(QSerialPort::Baud9600);
+  serial->setBaudRate(QSerialPort::Baud115200);  // ~250 Hz
   serial->setDataBits(QSerialPort::Data8);
   serial->setParity(QSerialPort::NoParity);
   serial->setFlowControl(QSerialPort::NoFlowControl);
@@ -190,9 +190,10 @@ void ReadSerial::readSerialPort()
 
   QString line = QString::fromStdString((std::string)buf);
   QTextStream fstream(file);
+//  fstream << linlength << "," << line;
 
   /* parse out string */
-  QRegularExpression re("<(\\d+),(\\d+),(\\d+),(\\d+)>$");
+  QRegularExpression re("(\\d+),(\\d+),(\\d+),(\\d+)$");
   QRegularExpressionMatch m = re.match(line);
   int indx   =  m.captured(1).toInt();
   double ti  =  m.captured(2).toFloat() * 0.001;
@@ -202,7 +203,7 @@ void ReadSerial::readSerialPort()
   double y1 = y1last + dy1;
   double y2 = y2last + dy2;
 
-   bt->push(ti);
+  bt->push(ti);
   by1->push(y1);
   by2->push(y2);
 
