@@ -31,6 +31,7 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
 
   /* create new file object; delete old file if it exists; open */
   file = new QFile(fpth, this);
+
   if(file->exists()){file->remove();}
   openfile(file, QIODevice::WriteOnly | QIODevice::Append);
 
@@ -80,7 +81,11 @@ ReadSerial::ReadSerial(QString fpth, QWidget *parent)
   connect(serial, serialerror, this, &ReadSerial::SerialError);
 }
 
-ReadSerial::~ReadSerial(){delete ui;}
+ReadSerial::~ReadSerial()
+{
+  file->close();
+  delete ui;
+}
 
 /* returns a pen specified by color and width */
 QPen ReadSerial::makePen(Qt::GlobalColor color, int width)
@@ -149,6 +154,7 @@ void ReadSerial::configureSerialPort(QSerialPort *serial)
   serial->setDataTerminalReady(true);
 }
 
+
 /* slot: throw an error if there is an error on the serial port */
 void ReadSerial::SerialError()
 {
@@ -178,52 +184,73 @@ void ReadSerial::readSerialPort()
   if(++xi == 1){serial->clear(); return;}
 
   /* check buffer size, if < xlen_min, then return */
-  char xbuffer[bufsize];
-  int linelength = serial->peek(xbuffer, bufsize);
-  if(linelength < linemin){return;}
-
-  int xend = findchar(xbuffer, linelength, '\n');
-  if(xend == 0){return;}
-
   char buf[bufsize];
-  int linlength = serial->readLine(buf, bufsize);
+  int Ni = serial->peek(buf, linemin);
+  if(Ni < linemin){return;}
 
-  QString line = QString::fromStdString((std::string)buf);
-  QTextStream fstream(file);
-//  fstream << linlength << "," << line;
+  qint64 Nline = serial->read(buf, linemin);
 
-  /* parse out string */
-  QRegularExpression re("(\\d+),(\\d+),(\\d+),(\\d+)$");
-  QRegularExpressionMatch m = re.match(line);
-  int indx   =  m.captured(1).toInt();
-  double ti  =  m.captured(2).toFloat() * 0.001;
-  double dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
-  double dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
+  file->write(buf, Nline);
 
-  double y1 = y1last + dy1;
-  double y2 = y2last + dy2;
+  qDebug() << *(int32_t *)&buf[0] << *(int32_t *)&buf[4] << *(int32_t *)&buf[8];
 
-  bt->push(ti);
-  by1->push(y1);
-  by2->push(y2);
+//  works
+//  int32_t xl;
+//  memcpy(&xl, buf, sizeof(int32_t));
+//  qDebug() << xl << sizeof(int32_t);
 
-  ymax = std::max(by1->max, by2->max);
-  ymin = std::min(by1->min, by2->min);
+//  qDebug() << "Nline =" << Nline << ", linelength = " << linelength << ", linemin = " << linemin;
+//  return;
 
-  if(bt->Ni > Npnt)
-  {
-    series1->remove(0);
-    series2->remove(0);
-  }
-  series1->append(ti, y1);
-  series2->append(ti, y2);
+//  long *Vd = (long *)&buf;
 
-  qaxisX->setRange(bt->min, bt->max + 1);
-  qaxisY->setRange(ymin, ymax);
+//  unsigned long d10 = Vd[0];
+//  unsigned long d100 = Vd[1];
+//  unsigned long d1000 = Vd[2];
 
-  fstream << indx << "," << linlength << "," << ti << "," << dy1 << "," << dy2 << '\n';
-  y1last = y1;
-  y2last = y2;
+//  QTextStream fstream(file);
+//  xl = char2long(buf[3],buf[2],buf[1],buf[0]);
+
+//  qDebug() << (long)buf[0] << (long)buf[4] << *(long *)(&buf[8]);
+
+
+return;
+//  QString line = QString::fromStdString((std::string)buf);
+//  QTextStream fstream(file);
+//  fstream << line;
+
+//  /* parse out string */
+//  QRegularExpression re("(\\d+),(\\d+),(\\d+),(\\d+)$");
+//  QRegularExpressionMatch m = re.match(line);
+//  int indx   =  m.captured(1).toInt();
+//  double ti  =  m.captured(2).toFloat() * 0.001;
+//  double dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
+//  double dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
+
+//  double y1 = y1last + dy1;
+//  double y2 = y2last + dy2;
+
+//  bt->push(ti);
+//  by1->push(y1);
+//  by2->push(y2);
+
+//  ymax = std::max(by1->max, by2->max);
+//  ymin = std::min(by1->min, by2->min);
+
+//  if(bt->Ni > Npnt)
+//  {
+//    series1->remove(0);
+//    series2->remove(0);
+//  }
+//  series1->append(ti, y1);
+//  series2->append(ti, y2);
+
+//  qaxisX->setRange(bt->min, bt->max + 1);
+//  qaxisY->setRange(ymin, ymax);
+
+//  fstream << indx << "," << linlength << "," << ti << "," << dy1 << "," << dy2 << '\n';
+//  y1last = y1;
+//  y2last = y2;
 }
 
 /* [Stop] pressed */

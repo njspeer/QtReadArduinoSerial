@@ -61,7 +61,8 @@ private:
   Ui::ReadSerial *ui;
   void SerialError();
   int  bufsize = 1024;
-  const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
+//  const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
+  const int linemin = 3*4;
   const double dy = 0.05;
   double y1last = 1, y2last = 1, ymin, ymax;
 
