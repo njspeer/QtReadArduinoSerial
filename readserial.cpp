@@ -146,7 +146,7 @@ void ReadSerial::configureSerialPort(QSerialPort *serial)
   /* configure serial port */
   serial->setPortName(pname);
   serial->open(QIODevice::ReadWrite);
-  serial->setBaudRate(QSerialPort::Baud115200);  // ~250 Hz
+  serial->setBaudRate(1536000*2);  // ~250 Hz
   serial->setDataBits(QSerialPort::Data8);
   serial->setParity(QSerialPort::NoParity);
   serial->setFlowControl(QSerialPort::NoFlowControl);
@@ -192,30 +192,10 @@ void ReadSerial::readSerialPort()
 
   file->write(buf, Nline);
 
-  qDebug() << *(int32_t *)&buf[0] << *(int32_t *)&buf[4] << *(int32_t *)&buf[8];
+  double ti   =  (double)(*(int32_t *)&buf[0]) * 0.001;
+  double dy1  =  ((double)(*(int32_t *)&buf[4]) * (y2max) - 1) * dy;
+  double dy2  =  ((double)(*(int32_t *)&buf[8]) * (y2max) - 1) * dy;
 
-//  works
-//  int32_t xl;
-//  memcpy(&xl, buf, sizeof(int32_t));
-//  qDebug() << xl << sizeof(int32_t);
-
-//  qDebug() << "Nline =" << Nline << ", linelength = " << linelength << ", linemin = " << linemin;
-//  return;
-
-//  long *Vd = (long *)&buf;
-
-//  unsigned long d10 = Vd[0];
-//  unsigned long d100 = Vd[1];
-//  unsigned long d1000 = Vd[2];
-
-//  QTextStream fstream(file);
-//  xl = char2long(buf[3],buf[2],buf[1],buf[0]);
-
-//  qDebug() << (long)buf[0] << (long)buf[4] << *(long *)(&buf[8]);
-
-
-return;
-//  QString line = QString::fromStdString((std::string)buf);
 //  QTextStream fstream(file);
 //  fstream << line;
 
@@ -227,30 +207,29 @@ return;
 //  double dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
 //  double dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
 
-//  double y1 = y1last + dy1;
-//  double y2 = y2last + dy2;
+  double y1 = y1last + dy1;
+  double y2 = y2last + dy2;
 
-//  bt->push(ti);
-//  by1->push(y1);
-//  by2->push(y2);
+  bt->push(ti);
+  by1->push(y1);
+  by2->push(y2);
 
-//  ymax = std::max(by1->max, by2->max);
-//  ymin = std::min(by1->min, by2->min);
+  ymax = std::max(by1->max, by2->max);
+  ymin = std::min(by1->min, by2->min);
 
-//  if(bt->Ni > Npnt)
-//  {
-//    series1->remove(0);
-//    series2->remove(0);
-//  }
-//  series1->append(ti, y1);
-//  series2->append(ti, y2);
+  if(bt->Ni > Npnt)
+  {
+    series1->remove(0);
+    series2->remove(0);
+  }
+  series1->append(ti, y1);
+  series2->append(ti, y2);
 
-//  qaxisX->setRange(bt->min, bt->max + 1);
-//  qaxisY->setRange(ymin, ymax);
+  qaxisX->setRange(bt->min, bt->max);
+  qaxisY->setRange(ymin, ymax);
 
-//  fstream << indx << "," << linlength << "," << ti << "," << dy1 << "," << dy2 << '\n';
-//  y1last = y1;
-//  y2last = y2;
+  y1last = y1;
+  y2last = y2;
 }
 
 /* [Stop] pressed */
