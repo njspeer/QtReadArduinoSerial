@@ -8,53 +8,55 @@
 int main()
 {
 
+  /* open file and get size */
   char* fpth = "../data.bin";
   struct stat st;
   stat(fpth, &st);
-
   long Nst_size    = st.st_size;
-
   printf("Nst_size = %ld\n", Nst_size);
 
-  int Nbytes = 4; // number of bytes per element
-  int Nel = Nst_size/(8*Nbytes);
+  /* get the number of 16-bit elements */
+  int Nbytes = 2; // number of bytes per element
+  int Nel = Nst_size/(Nbytes);
 
   printf("Nel = %d\n", Nel);
 
-  int ncol = 3;
+  /* get the number of rows and columns */
+  int ncol = 100;
   int nrows = Nel/ncol;
 
   printf("Nrows = %d\n", nrows);
 
-  int Nchar = Nel*Nbytes;
-
-
-
-  char Vchar[Nchar];
+  /* read-in file as char array */
+  char Vchar[Nst_size];
   FILE *fp;
   fp = fopen(fpth,"r");
-  for(int i = 0;i < Nchar; ++i){Vchar[i] = fgetc(fp);}
+  for(int i = 0;i < Nst_size; ++i){Vchar[i] = fgetc(fp);}
   fclose(fp);
 
-  printf("Nchar = %d\n", Nchar);
-
-  int32_t Vx[Nel];
+  /* convert to int16 */
+  int16_t Vx[Nel];
   for(int i = 0; i < Nel; ++i)
   {
-    Vx[i] = *(int32_t *)(&Vchar[0] + i*Nbytes);
+    Vx[i] = *(int16_t *)(&Vchar[0] + i*Nbytes);
   }
+return 0;
 
+  /* write to file */
   FILE *fpnt;
   fpnt = fopen("fout.csv","w+");
 
+
   for(int i = 0; i < Nel; ++i)
   {
-    fprintf(fpnt, "%ld,", (long)Vx[i]);
-    if(i && !((i+1) % ncol))
+    if((i+1)%100==0)
     {
-      fprintf(fpnt, "\n");
+      fprintf(fpnt, "%d\n", Vx[i]);
+    }
+    else
+    {
+      fprintf(fpnt, "%d,", Vx[i]);
     }
   }
-
   return 0;
 }

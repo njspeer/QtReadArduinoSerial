@@ -62,12 +62,15 @@ private:
   void SerialError();
   int  bufsize = 1024;
 //  const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
-  const int linemin = 3*4;
+  const int linemin = 100*2;
   const double dy = 0.05;
   double y1last = 1, y2last = 1, ymin, ymax;
+  QElapsedTimer timer;
 
   /* 2/((qreal)(2^31-1)) */
-  constexpr static double y2max = 9.313225750491594e-10;
+//  constexpr static double y2max = 9.313225750491594e-10;
+  constexpr static double y2max = 6.103701895199438e-5;
+
 
 };
 #endif // READSERIAL_H

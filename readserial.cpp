@@ -1,6 +1,7 @@
 #include "readserial.h"
 #include "ui_readserial.h"
 #include <QDebug>
+#include <QElapsedTimer>
 
 #include <QRegularExpression> /* regex */
 #include <QtCharts/QLineSeries>
@@ -146,7 +147,7 @@ void ReadSerial::configureSerialPort(QSerialPort *serial)
   /* configure serial port */
   serial->setPortName(pname);
   serial->open(QIODevice::ReadWrite);
-  serial->setBaudRate(1536000*2);  // ~250 Hz
+  serial->setBaudRate(768000);  // ~250 Hz
   serial->setDataBits(QSerialPort::Data8);
   serial->setParity(QSerialPort::NoParity);
   serial->setFlowControl(QSerialPort::NoFlowControl);
@@ -180,9 +181,13 @@ int ReadSerial::findchar(char *ch, int xlen, char c)
 /* slot: read serial data, write to file */
 void ReadSerial::readSerialPort()
 {
-  /* clear the buffer one last time */
-  if(++xi == 1){serial->clear(); return;}
-
+  if(++xi == 1)
+  {
+    /*clear the buffer one last time and start the timer */
+    serial->clear();
+    qDebug() << "start";
+    timer.start();
+  }
   /* check buffer size, if < xlen_min, then return */
   char buf[bufsize];
   int Ni = serial->peek(buf, linemin);
@@ -192,9 +197,11 @@ void ReadSerial::readSerialPort()
 
   file->write(buf, Nline);
 
-  double ti   =  (double)(*(int32_t *)&buf[0]) * 0.001;
-  double dy1  =  ((double)(*(int32_t *)&buf[4]) * (y2max) - 1) * dy;
-  double dy2  =  ((double)(*(int32_t *)&buf[8]) * (y2max) - 1) * dy;
+  double ti   =  (double)(*(uint16_t *)&buf[0]) * 0.001;
+//  double dy1  =  ((double)(*(int16_t *)&buf[2]) * (y2max) - 1) * dy;
+//  double dy2  =  ((double)(*(int16_t *)&buf[4]) * (y2max) - 1) * dy;
+  double dy1  =  (double)(*(int16_t *)&buf[2]);
+  double dy2  =  (double)(*(int16_t *)&buf[4])*2;
 
 //  QTextStream fstream(file);
 //  fstream << line;
@@ -207,8 +214,8 @@ void ReadSerial::readSerialPort()
 //  double dy1 = (m.captured(3).toFloat() * (y2max) - 1) * dy;
 //  double dy2 = (m.captured(4).toFloat() * (y2max) - 1) * dy;
 
-  double y1 = y1last + dy1;
-  double y2 = y2last + dy2;
+  double y1 = dy2; //y1last + dy1;
+  double y2 = dy1; //y2last + dy2;
 
   bt->push(ti);
   by1->push(y1);
@@ -233,4 +240,8 @@ void ReadSerial::readSerialPort()
 }
 
 /* [Stop] pressed */
-void ReadSerial::on_Stop_clicked(){qApp->exit();}
+void ReadSerial::on_Stop_clicked()
+{
+  qDebug() << "dt = " << timer.elapsed();
+  qApp->exit();
+}
