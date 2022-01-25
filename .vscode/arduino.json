@@ -1,5 +1,5 @@
 {
-    "board": "arduino:avr:uno",
+    "board": "arduino:mbed_nano:nanorp2040connect",
     "sketch": "Arduinocode_Random/arduinocode/arduinocode.ino",
     "port": "/dev/ttyACM0"
 }

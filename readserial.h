@@ -36,6 +36,7 @@ public:
   QSerialPort *serial;
   void configureSerialPort(QSerialPort *serial);
   int findchar(char *xbuffer, int xlen, char c);
+  int findnull(char *buffer, int maxlen);
   void readSerialPort();
   QString fpath;// = "../Serial/data.txt";
 
@@ -62,7 +63,7 @@ private:
   void SerialError();
   int  bufsize = 1024;
 //  const int linemin = 4 + 3 + 2 + 1; /* 4items + 3',' + 2'{}' + 1'\n' */
-  const int linemin = 100*2;
+  const int linemin = 100*2 + 4;
   const double dy = 0.05;
   double y1last = 1, y2last = 1, ymin, ymax;
   QElapsedTimer timer;

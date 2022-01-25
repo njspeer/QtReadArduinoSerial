@@ -147,7 +147,7 @@ void ReadSerial::configureSerialPort(QSerialPort *serial)
   /* configure serial port */
   serial->setPortName(pname);
   serial->open(QIODevice::ReadWrite);
-  serial->setBaudRate(768000);  // ~250 Hz
+  serial->setBaudRate(512000);  // ~250 Hz
   serial->setDataBits(QSerialPort::Data8);
   serial->setParity(QSerialPort::NoParity);
   serial->setFlowControl(QSerialPort::NoFlowControl);
@@ -178,30 +178,53 @@ int ReadSerial::findchar(char *ch, int xlen, char c)
   return 0;
 }
 
+/* find char c in C-style char array; returns position + 1 */
+int ReadSerial::findnull(char *ch, int xlen)
+{
+  for(int i = 0; i < xlen; i+=2)
+  {
+    if((*(uint32_t *)&ch[i]) == 0)
+    {
+      return i+4;
+    }
+  }
+  return -1;
+}
+
 /* slot: read serial data, write to file */
 void ReadSerial::readSerialPort()
 {
+
+  /* check buffer size, if < xlen_min, then return */
+  int Ni = serial->bytesAvailable();
+  if(Ni < linemin*2){return;}
+
+  /* one-time trim of the data */
   if(++xi == 1)
   {
-    /*clear the buffer one last time and start the timer */
-    serial->clear();
-    qDebug() << "start";
+    char xbuf[bufsize];
+    int xlen = serial->peek(xbuf, linemin);
+    int N0 = findnull(xbuf, xlen);
+    if(N0 > 0)
+    {
+      serial->skip(N0);
+    }
     timer.start();
+    return;
   }
-  /* check buffer size, if < xlen_min, then return */
-  char buf[bufsize];
-  int Ni = serial->peek(buf, linemin);
-  if(Ni < linemin){return;}
 
+  char buf[bufsize];
   qint64 Nline = serial->read(buf, linemin);
 
   file->write(buf, Nline);
 
-  double ti   =  (double)(*(uint16_t *)&buf[0]) * 0.001;
+  double ti   =  (double)(*(uint16_t *)&buf[0]);
 //  double dy1  =  ((double)(*(int16_t *)&buf[2]) * (y2max) - 1) * dy;
 //  double dy2  =  ((double)(*(int16_t *)&buf[4]) * (y2max) - 1) * dy;
   double dy1  =  (double)(*(int16_t *)&buf[2]);
-  double dy2  =  (double)(*(int16_t *)&buf[4])*2;
+  double dy2  =  (double)(*(int16_t *)&buf[4]);
+
+  qDebug() << ti << dy1 << dy2;
 
 //  QTextStream fstream(file);
 //  fstream << line;

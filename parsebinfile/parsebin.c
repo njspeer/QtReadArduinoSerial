@@ -40,8 +40,7 @@ int main()
   {
     Vx[i] = *(int16_t *)(&Vchar[0] + i*Nbytes);
   }
-return 0;
-
+  
   /* write to file */
   FILE *fpnt;
   fpnt = fopen("fout.csv","w+");

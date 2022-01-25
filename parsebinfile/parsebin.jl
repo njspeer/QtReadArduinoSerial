@@ -3,6 +3,7 @@ fname = "data.bin"
 
 fstat  = stat(fname)
 Nbytes = 2
+ncol   = 102
 Nj     = Int(fstat.size/Nbytes)
 Vint   = Vector{Int}(undef, Nj)
 
@@ -12,12 +13,14 @@ file = open(fname,"r")
   end
 close(file)
 
-M = reshape(Vint, 100, Int(Nj/100))'
+Vint |> print
 
-Vsum = sum(M[:, 2:end], dims=2)
+M = reshape(Vint, ncol, Int(Nj/ncol))'
 
-sum(Vsum .== sum(0:99))/size(M, 1)
-all(Vsum .== sum(0:99))
+Vsum = sum(M[:, 5:end], dims=2)
+
+sum(Vsum .== sum(3:99))/size(M, 1)
+all(Vsum .== sum(3:99))
 
 Vi = M[1, :]
 
@@ -33,12 +36,12 @@ all(diff(Vi) .== 1)
 # for 832,000 bit rate, only 40% accurate
 # for 921,600 bit rate: only 23% accurate
 
-rows = size(M, 1)
-δt = 70837/1000
-rate = rows/δt
+# rows = size(M, 1)
+# δt = 70837/1000
+# rate = rows/δt
 
-# theoretical throughput for  768,000 bits/sec
+# # theoretical throughput for  768,000 bits/sec
 
-Rate = 768000 # bits/second
-Sample = 16*100
-SampleRate = Rate/Sample # (480 S/s)
+# Rate = 768000 # bits/second
+# Sample = 16*100
+# SampleRate = Rate/Sample # (480 S/s)
